@@ -64,7 +64,8 @@ module.exports = ({ strapi }) => ({
   },
 
   async queryEmbeddings(data) {
-    if (data?.query) return { error: "Please provide a query" };
+    const emptyQuery = data?.query ? false : true;
+    if (emptyQuery) return { error: "Please provide a query" };
 
     const response = await pluginManager.queryEmbedding(data.query);
     console.log(response);
@@ -90,11 +91,9 @@ module.exports = ({ strapi }) => ({
   },
 
   async getEmbeddings(ctx) {
-    
     const contentType = strapi.contentType(
       "plugin::open-ai-embeddings.embedding"
     );
-
     const sanitizedQueryParams = await contentAPI.query(
       ctx.query,
       contentType,
