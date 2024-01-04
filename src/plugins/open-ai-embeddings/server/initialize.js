@@ -1,15 +1,18 @@
 // @ts-nocheck
 
-const  { OpenAIEmbeddings } = require("langchain/embeddings/openai");
+const { OpenAIEmbeddings } = require("langchain/embeddings/openai");
 const { ConversationalRetrievalQAChain } = require("langchain/chains");
 const { ChatOpenAI } = require("@langchain/openai");
 const { createClient } = require("@supabase/supabase-js");
-const { SupabaseVectorStore } = require("@langchain/community/vectorstores/supabase");
+const {
+  SupabaseVectorStore,
+} = require("@langchain/community/vectorstores/supabase");
 
 class PluginManager {
   constructor() {
     this.embeddings = null;
     this.client = null;
+    this.chat = null;
   }
 
   async initializeClient(dbUrl, dbPrivateKey) {
@@ -45,13 +48,31 @@ class PluginManager {
     }
   }
 
+  async initializeChat(openAIApiKey) {
+    console.log("Initializing Chat Model");
+
+    if (this.chat) return this.chat;
+    try {
+      const chat = new ChatOpenAI({
+        modelName: "gpt-3.5-turbo-16k",
+        temperature: 0.9,
+        openAIApiKey: openAIApiKey,
+      });
+
+      this.chat = chat;
+      return this.chat;
+    } catch (error) {
+      console.error(`Failed to initialize Chat: ${error}`);
+      throw new Error(`Failed to initialize Chat: ${error}`);
+    }
+  }
+
   async initialize(settings) {
     await this.initializeClient(settings.dbUrl, settings.dbPrivateKey);
     await this.initializeEmbeddings(settings.openAIApiKey);
+    await this.initializeChat(settings.openAIApiKey);
     console.log("Initialization Complete");
-
   }
-
 
   async createEmbedding(docs) {
     try {
@@ -88,12 +109,6 @@ class PluginManager {
 
   async queryEmbedding(query) {
     try {
-      const chat = new ChatOpenAI({
-        modelName: "gpt-3.5-turbo-16k",
-        temperature: 0.9,
-        openAIApiKey: this.settings.openAIApiKey,
-      });
-
       const vectorStore = await SupabaseVectorStore.fromExistingIndex(
         this.embeddings,
         {
@@ -104,7 +119,7 @@ class PluginManager {
       );
 
       let chain = ConversationalRetrievalQAChain.fromLLM(
-        chat,
+        this.chat,
         vectorStore.asRetriever(),
         { returnSourceDocuments: true }
       );
@@ -118,15 +133,6 @@ class PluginManager {
       throw new Error(`Failed to send query: ${error}`);
     }
   }
-
-  async getSettings() {
-    return {
-      createEmbedding: this.createEmbedding,
-    };
-  }
-
-
 }
-
 
 module.exports = new PluginManager();

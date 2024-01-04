@@ -1,7 +1,6 @@
 // @ts-nocheck
 const pluginManager = require("../initialize");
 const { Document } = require("langchain/document");
-const { VectorDBQAChain } = require("langchain/chains");
 
 const { sanitize } = require("@strapi/utils");
 const { contentAPI } = sanitize;
@@ -48,7 +47,6 @@ module.exports = ({ strapi }) => ({
   },
 
   async deleteEmbedding(params) {
-    const plugin = await pluginManager.getSettings();
 
     const currentEntry = await strapi.entityService.findOne(
       "plugin::open-ai-embeddings.embedding",
@@ -56,7 +54,7 @@ module.exports = ({ strapi }) => ({
     );
 
     const ids = [currentEntry.embeddingsId];
-    await plugin.pineconeStore.delete({ ids: ids });
+    await pluginManager.deleteEmbedding(ids);
     const delEntryResponse = await strapi.entityService.delete(
       "plugin::open-ai-embeddings.embedding",
       params.id
@@ -64,22 +62,15 @@ module.exports = ({ strapi }) => ({
 
     return delEntryResponse;
   },
+
   async queryEmbeddings(data) {
-    const emptyQuery = data?.query ? false : true;
-    if (emptyQuery) return { error: "Please provide a query" };
+    if (data?.query) return { error: "Please provide a query" };
 
-    const plugin = await pluginManager.getSettings();
+    const response = await pluginManager.queryEmbedding(data.query);
+    console.log(response);
+    return response;
 
-    const chain = VectorDBQAChain.fromLLM(
-      plugin.model,
-      pluginManager.pineconeStore,
-      {
-        k: 1,
-        returnSourceDocuments: true,
-      }
-    );
 
-    return await chain.call({ query: data.query });
   },
   async getEmbedding(ctx) {
     const contentType = strapi.contentType(
@@ -99,9 +90,11 @@ module.exports = ({ strapi }) => ({
   },
 
   async getEmbeddings(ctx) {
+    
     const contentType = strapi.contentType(
       "plugin::open-ai-embeddings.embedding"
     );
+
     const sanitizedQueryParams = await contentAPI.query(
       ctx.query,
       contentType,

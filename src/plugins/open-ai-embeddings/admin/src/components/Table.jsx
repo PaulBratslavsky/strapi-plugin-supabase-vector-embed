@@ -2,7 +2,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { useHistory } from "react-router-dom";
-import styled from 'styled-components';
+import styled from "styled-components";
 import pluginId from "../pluginId";
 
 import {
@@ -42,9 +42,8 @@ export default function PluginTable({ data }) {
               <Typography variant="sigma">Content</Typography>
             </Th>
             <Th>
-              <Typography variant="sigma">Pinecone ID</Typography>
+              <Typography variant="sigma">Embed ID</Typography>
             </Th>
-       
             <Th>
               <VisuallyHidden>Actions</VisuallyHidden>
             </Th>
@@ -80,7 +79,7 @@ export default function PluginTable({ data }) {
                       {entry.embeddingsId && entry.embeddingsId}
                     </Typography>
                   </Td>
-                 
+
                   <Td>
                     <Flex>
                       <Link
